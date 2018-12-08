@@ -1,0 +1,249 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+      <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+</head>
+<body>
+<p>Pygame</p>
+    <script>
+	
+        var SCREEN_WIDTH = 800;
+        var SCREEN_HEIGHT = 600;
+        var SPACECRAFT_SPEED = 160;
+		var BULLETS_NUM = 3;
+            
+            var config = {
+                type: Phaser.AUTO,
+                width: SCREEN_WIDTH,
+                height: SCREEN_HEIGHT,
+                physics: {
+                    default: 'arcade',
+                    
+                    arcade: {
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                }
+            };
+            
+            var game = new Phaser.Game(config);
+			var asteroids = [];
+			var bullets = [];
+			var isPlayerAlive = true;
+			var bulletTime = 0;
+			var emitter;
+			var score = 0;
+			var scoreText;
+			var bulletsText;
+			var gameOverText;
+			var menuText;
+			var explosion;
+			
+			function resetAsteroid(asteroid)
+			{
+				asteroid.setPosition(Phaser.Math.Between(0, SCREEN_WIDTH), Phaser.Math.Between(-100, -50));
+				asteroid.setVelocity(Phaser.Math.Between(-20,20),Phaser.Math.Between(50,200));
+			}
+			
+			function deleteBullet(bullet)
+			{
+				index = bullets.indexOf(bullet);
+				if(index !== -1){
+					bullets.splice(index,1);
+				}	
+				
+				bullet.destroy();
+			}	
+
+			function menuTeksts(isOn = true){
+				var gameTxt = '';
+				var menuTxt = '';
+				if(isOn)
+				{
+					gameTxt = 'GAME OVER';
+					menuTxt = 'Your score: ' + score + '\nPress ENTER to try again.';
+				}
+				gameOverText.setText(gameTxt);
+				menuText.setText(menuTxt);
+			}
+			
+
+			function restart(game)
+			{
+				score = 0;
+				BULLETS_NUM = 1;
+				
+				scoreText.setText('Score: ' + score);
+				bulletsText.setText('Bullets: ' + BULLETS_NUM);
+				
+				menuTeksts(false);
+				
+				//isPlayerAlive = true;
+			}
+			
+			function playerCollision(player, asteroids)
+			{
+				isPlayerAlive = false;
+				emitter.explode(10, player.x, player.y);
+				player.destroy();
+				
+				menuTeksts();
+				
+				scoreText.setText(' ');
+				bulletsText.setText(' ');
+			}
+			
+			function bulletsCollision(bullet, asteroid)
+			{
+				index = bullets.indexOf(bullet);
+				if(index !== -1){
+					bullets.splice(index,1);
+				}
+				
+				bullet.removeInteractive();
+				
+				resetAsteroid(asteroid);
+				var anim = bullet.play('explode');
+				score += 1;
+				scoreText.setText('Score: ' + score);
+			}
+			        
+            function preload ()
+            {
+                this.load.image('space', '/static/media/space.png');
+                this.load.image('flare', '/static/media/flare.png');
+                this.load.image('asteroid', '/static/media/asteroid.png');
+                this.load.image('spaceCraft', '/static/media/spacecraft.png');
+                this.load.image('bullet', '/static/media/bullet.png');
+                this.load.image('explosion0', '/static/media/explosion0.png');
+                this.load.image('explosion1', '/static/media/explosion1.png');
+                this.load.image('explosion2', '/static/media/explosion2.png');
+            }
+        
+            function create ()
+            {			
+                cursors = this.input.keyboard.createCursorKeys();
+				space = this.input.keyboard.addKey('SPACE');
+				enter = this.input.keyboard.addKey('ENTER');
+				
+                this.add.image(400, 300, 'space');
+				var particles = this.add.particles('flare');
+				this.anims.create({
+					key: 'explode',
+					frames: [
+						{ key: 'explosion0' },
+						{ key: 'explosion1' },
+						{ key: 'explosion2' }
+					],
+					frameRate: null,
+					repeat: 0,
+					hideOnComplete: true
+				});
+				
+				emitter = particles.createEmitter({
+					y: 45,
+					speed: { min: 200, max: 400 },
+					lifespan: 100,
+					angle: 90,
+					quantity: 8,
+					scale: { start: 0.2, end: 0 },
+					blendMode: 'ADD'
+				});
+				
+				score = 0;
+				
+                this.player = this.physics.add.sprite(400, 200, 'spaceCraft');
+                this.player.setCollideWorldBounds(true);
+				
+				emitter.startFollow(this.player);
+				
+				for(var i = 0; i < 10; i++)
+				{
+					asteroids.push(this.physics.add.sprite(Phaser.Math.Between(0, SCREEN_WIDTH), Phaser.Math.Between(-100, -50), 'asteroid').setVelocity(Phaser.Math.Between(-20,20),Phaser.Math.Between(50,200)).setCircle(31));
+				}
+				
+				this.physics.add.overlap(this.player, asteroids, playerCollision);
+				this.physics.add.overlap(bullets, asteroids, bulletsCollision);
+				
+				scoreText = this.add.text(16, 16, 'Score: ' + score, { fontSize: '30px', fill: '#FFF' });
+				bulletsText = this.add.text(16, 48, 'Bullets: ' + BULLETS_NUM, { fontSize: '24px', fill: '#FFF' });
+				
+				gameOverText = this.add.text(SCREEN_WIDTH/6, SCREEN_HEIGHT/3, '', { fontSize: '50px', fill: '#FFF' });
+				menuText = this.add.text(SCREEN_WIDTH/6, SCREEN_HEIGHT/2, '', { fontSize: '35px', fill: '#FFF' });
+            }
+			
+			
+            
+            function update (time, delta)
+            {
+				var now = this.time.now;
+				
+				asteroids.forEach(function(element,index, arr){
+					if(element.x > SCREEN_WIDTH + 50 || element.x < 0 || element.y > SCREEN_HEIGHT + 50)
+					{
+						resetAsteroid(element);
+					}
+				});
+				
+				bullets.forEach(function(element, index, arr){
+					if(element.x > SCREEN_WIDTH || element.x < 0 || element.y > SCREEN_HEIGHT || element.y < 0 )
+					{
+						deleteBullet(element);
+					}
+				});
+        
+				if(isPlayerAlive)
+				{
+					if (cursors.left.isDown)
+					{
+						this.player.setVelocityX(-SPACECRAFT_SPEED);
+					}
+					else
+					{
+						this.player.setVelocityX(0);
+					}
+					 if (cursors.right.isDown)
+					{
+						this.player.setVelocityX(SPACECRAFT_SPEED);
+					}
+					if (cursors.up.isDown)
+					{
+						this.player.setVelocityY(-SPACECRAFT_SPEED);
+					}
+					else
+					{
+						this.player.setVelocityY(0);
+					}       
+					if (cursors.down.isDown)
+					{
+						this.player.setVelocityY(SPACECRAFT_SPEED);
+					}  
+					
+					if(space.isDown)
+					{
+						if(now > bulletTime && bullets.length < BULLETS_NUM)
+						{
+							bullets.push(this.physics.add.sprite(this.player.x,this.player.y ,'bullet').setVelocity(0,-200));
+							bulletTime = now + 200;
+						}
+					}
+				}
+				else 
+				{
+					if(enter.isDown)
+					{
+						console.log('newGame');
+						restart(this);
+					}
+				}
+            }
+			
+		
+        </script>
+
+</body>
+</html>
