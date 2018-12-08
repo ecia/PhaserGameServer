@@ -42,8 +42,8 @@
 			var gameOverText;
 			var menuText;
 			var explosion;
-			var upTo30 = true;
-			var upTo60 = true;
+			var upTo100 = true;
+			var upTo200 = true;
 			
 			function resetAsteroid(asteroid)
 			{
@@ -84,8 +84,8 @@
 				
 				menuTeksts(false);
 				
-				upTo30 = false;
-				upTo60 = false;
+				upTo100 = false;
+				upTo200 = false;
 				
 				asteroids.forEach(function(element,index, arr){
 					element.destroy();
@@ -96,7 +96,7 @@
 				player.setVisible(true);
 				emitter.setVisible(true);
 				player.x = 400;
-				player.y= 200;
+				player.y = 200;
 				
 				isPlayerAlive = true;
 			}
@@ -121,9 +121,9 @@
 				
 				bullet.removeInteractive();
 				var anim = bullet.play('explode');
+				score += 1 + Math.floor((asteroid.body.velocity.y)/50);
 				resetAsteroid(asteroid);
 				
-				score += 1;
 				scoreText.setText('Score: ' + score);
 			}
 			
@@ -131,26 +131,28 @@
 			{
 				for(var i = 0; i < n; i++)
 				{
-					asteroids.push(game.physics.add.sprite(Phaser.Math.Between(0, SCREEN_WIDTH), Phaser.Math.Between(-100, -50), 'asteroid').setVelocity(Phaser.Math.Between(-40,40),Phaser.Math.Between(50,200)).setCircle(31));
+					var asteroid=game.physics.add.sprite(Phaser.Math.Between(0, SCREEN_WIDTH), Phaser.Math.Between(-100, -50), 'asteroid').setVelocity(Phaser.Math.Between(-40,40),Phaser.Math.Between(50,200)).setCircle(31);
+					asteroid.stopVelocityOnCollide = false;
+					asteroids.push(asteroid);
 				}
 			}
 			
 			function gameControl(game)
 			{
-				if(upTo30 && score > 5 )
+				if(upTo100 && score > 100 )
 				{
-					upTo30 = false;
+					upTo100 = false;
 					BULLETS_NUM = 2;
 					addAsretoids(game, 5);
 					bulletsText.setText('BULLETS: ' + BULLETS_NUM);
-					console.log(asteroids.length);
 				}
 				
-				if(upTo60 && score > 10 )
+				if(upTo200 && score > 200 )
 				{
-					upTo60 = false;
+					upTo200 = false;
 					BULLETS_NUM = 3;
 					addAsretoids(game, 5);
+					bulletsText.setText('BULLETS: ' + BULLETS_NUM);
 				}
 					
 			}
