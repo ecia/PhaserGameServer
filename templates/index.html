@@ -4,14 +4,13 @@
 <head>
       <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
 </head>
-<body>
-<p>Pygame</p>
+<body style="background-color: #080d18;">
     <script>
 	
         var SCREEN_WIDTH = 800;
         var SCREEN_HEIGHT = 600;
         var SPACECRAFT_SPEED = 160;
-		var BULLETS_NUM = 3;
+		var BULLETS_NUM = 1;
             
             var config = {
                 type: Phaser.AUTO,
@@ -36,12 +35,15 @@
 			var isPlayerAlive = true;
 			var bulletTime = 0;
 			var emitter;
+			var player;
 			var score = 0;
 			var scoreText;
 			var bulletsText;
 			var gameOverText;
 			var menuText;
 			var explosion;
+			var upTo30 = true;
+			var upTo60 = true;
 			
 			function resetAsteroid(asteroid)
 			{
@@ -72,7 +74,7 @@
 			}
 			
 
-			function restart(game)
+			function restart(game, player)
 			{
 				score = 0;
 				BULLETS_NUM = 1;
@@ -82,19 +84,32 @@
 				
 				menuTeksts(false);
 				
-				//isPlayerAlive = true;
+				upTo30 = false;
+				upTo60 = false;
+				
+				asteroids.forEach(function(element,index, arr){
+					element.destroy();
+				});
+				
+				addAsretoids(game, 10);
+				
+				player.setVisible(true);
+				emitter.setVisible(true);
+				player.x = 400;
+				player.y= 200;
+				
+				isPlayerAlive = true;
 			}
 			
 			function playerCollision(player, asteroids)
 			{
 				isPlayerAlive = false;
-				emitter.explode(10, player.x, player.y);
-				player.destroy();
-				
-				menuTeksts();
-				
+				player.setVisible(false);
+				emitter.setVisible(false);
 				scoreText.setText(' ');
 				bulletsText.setText(' ');
+				
+				menuTeksts();
 			}
 			
 			function bulletsCollision(bullet, asteroid)
@@ -105,11 +120,39 @@
 				}
 				
 				bullet.removeInteractive();
-				
-				resetAsteroid(asteroid);
 				var anim = bullet.play('explode');
+				resetAsteroid(asteroid);
+				
 				score += 1;
 				scoreText.setText('Score: ' + score);
+			}
+			
+			function addAsretoids(game, n)
+			{
+				for(var i = 0; i < n; i++)
+				{
+					asteroids.push(game.physics.add.sprite(Phaser.Math.Between(0, SCREEN_WIDTH), Phaser.Math.Between(-100, -50), 'asteroid').setVelocity(Phaser.Math.Between(-40,40),Phaser.Math.Between(50,200)).setCircle(31));
+				}
+			}
+			
+			function gameControl(game)
+			{
+				if(upTo30 && score > 5 )
+				{
+					upTo30 = false;
+					BULLETS_NUM = 2;
+					addAsretoids(game, 5);
+					bulletsText.setText('BULLETS: ' + BULLETS_NUM);
+					console.log(asteroids.length);
+				}
+				
+				if(upTo60 && score > 10 )
+				{
+					upTo60 = false;
+					BULLETS_NUM = 3;
+					addAsretoids(game, 5);
+				}
+					
 			}
 			        
             function preload ()
@@ -154,19 +197,14 @@
 					blendMode: 'ADD'
 				});
 				
-				score = 0;
+                player = this.physics.add.sprite(400, 200, 'spaceCraft');
+                player.setCollideWorldBounds(true);
 				
-                this.player = this.physics.add.sprite(400, 200, 'spaceCraft');
-                this.player.setCollideWorldBounds(true);
+				emitter.startFollow(player);
 				
-				emitter.startFollow(this.player);
+				addAsretoids(this, 10);
 				
-				for(var i = 0; i < 10; i++)
-				{
-					asteroids.push(this.physics.add.sprite(Phaser.Math.Between(0, SCREEN_WIDTH), Phaser.Math.Between(-100, -50), 'asteroid').setVelocity(Phaser.Math.Between(-20,20),Phaser.Math.Between(50,200)).setCircle(31));
-				}
-				
-				this.physics.add.overlap(this.player, asteroids, playerCollision);
+				this.physics.add.overlap(player, asteroids, playerCollision);
 				this.physics.add.overlap(bullets, asteroids, bulletsCollision);
 				
 				scoreText = this.add.text(16, 16, 'Score: ' + score, { fontSize: '30px', fill: '#FFF' });
@@ -176,11 +214,11 @@
 				menuText = this.add.text(SCREEN_WIDTH/6, SCREEN_HEIGHT/2, '', { fontSize: '35px', fill: '#FFF' });
             }
 			
-			
-            
             function update (time, delta)
             {
 				var now = this.time.now;
+				
+				gameControl(this);
 				
 				asteroids.forEach(function(element,index, arr){
 					if(element.x > SCREEN_WIDTH + 50 || element.x < 0 || element.y > SCREEN_HEIGHT + 50)
@@ -200,48 +238,48 @@
 				{
 					if (cursors.left.isDown)
 					{
-						this.player.setVelocityX(-SPACECRAFT_SPEED);
+						player.setVelocityX(-SPACECRAFT_SPEED);
 					}
 					else
 					{
-						this.player.setVelocityX(0);
+						player.setVelocityX(0);
 					}
 					 if (cursors.right.isDown)
 					{
-						this.player.setVelocityX(SPACECRAFT_SPEED);
+						player.setVelocityX(SPACECRAFT_SPEED);
 					}
 					if (cursors.up.isDown)
 					{
-						this.player.setVelocityY(-SPACECRAFT_SPEED);
+						player.setVelocityY(-SPACECRAFT_SPEED);
 					}
 					else
 					{
-						this.player.setVelocityY(0);
+						player.setVelocityY(0);
 					}       
 					if (cursors.down.isDown)
 					{
-						this.player.setVelocityY(SPACECRAFT_SPEED);
+						player.setVelocityY(SPACECRAFT_SPEED);
 					}  
 					
 					if(space.isDown)
 					{
 						if(now > bulletTime && bullets.length < BULLETS_NUM)
 						{
-							bullets.push(this.physics.add.sprite(this.player.x,this.player.y ,'bullet').setVelocity(0,-200));
+							bullets.push(this.physics.add.sprite(player.x,player.y ,'bullet').setVelocity(0,-200));
 							bulletTime = now + 200;
 						}
 					}
 				}
+				
 				else 
 				{
 					if(enter.isDown)
 					{
 						console.log('newGame');
-						restart(this);
+						restart(this,player);
 					}
 				}
             }
-			
 		
         </script>
 
